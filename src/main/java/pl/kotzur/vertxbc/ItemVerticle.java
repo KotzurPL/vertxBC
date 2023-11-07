@@ -3,12 +3,9 @@ package pl.kotzur.vertxbc;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpServer;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.JWTOptions;
-import io.vertx.ext.auth.KeyStoreOptions;
 import io.vertx.ext.auth.PubSecKeyOptions;
-import io.vertx.ext.auth.authentication.Credentials;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import io.vertx.ext.mongo.MongoClient;
@@ -61,7 +58,8 @@ public class ItemVerticle extends AbstractVerticle {
   }
 
   private void getItems(RoutingContext routingContext) {
-    repository.getItemsByOwnerId("123", response -> {
+    String userId = routingContext.user().get("userId");
+    repository.getItemsByOwnerId(userId, response -> {
       if (response.succeeded()) {
         routingContext.response()
           .putHeader("Content-Type", "application/json")
@@ -74,24 +72,19 @@ public class ItemVerticle extends AbstractVerticle {
 
   private void postItem(RoutingContext routingContext) {
     JsonObject item = routingContext.getBodyAsJson();
+    String userId = routingContext.user().get("userId");
     UUID uuidId = UUID.randomUUID();
     item.put("_id", uuidId.toString());
-    UUID uuidOwner = UUID.randomUUID();
+    UUID uuidOwner = UUID.fromString(userId);
     item.put("owner", uuidOwner.toString());
-    System.out.println(item);
 
-    mongoClient.save("items", item, response -> {
+    repository.saveItem(item, response -> {
       if (response.succeeded()) {
-        String id = response.result();
-        System.out.println("Inserted item with id: " + id);
+        routingContext.response().end(response.result().encodePrettily());
       } else {
         response.cause().printStackTrace();
       }
     });
-
-    JsonObject response = new JsonObject();
-    response.put("message", "Item created successfully.");
-    routingContext.response().end(response.encodePrettily());
   }
 
   private void postLogin(RoutingContext routingContext) {

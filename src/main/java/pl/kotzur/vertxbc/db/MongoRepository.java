@@ -20,8 +20,7 @@ public class MongoRepository {
   }
 
   public void getItemsByOwnerId(String ownerId, Handler<AsyncResult<JsonArray>> resultHandler) {
-    //JsonObject query = new JsonObject().put("owner", ownerId);
-    JsonObject query = new JsonObject();
+    JsonObject query = new JsonObject().put("owner", ownerId);
     mongoClient.find("items", query, response -> {
       if (response.succeeded()) {
         if (response.result() == null) {
@@ -46,6 +45,17 @@ public class MongoRepository {
           JsonObject user = response.result();
           resultHandler.handle(Future.succeededFuture(user));
         }
+      } else {
+        response.cause().printStackTrace();
+      }
+    });
+  }
+
+  public void saveItem(JsonObject item, Handler<AsyncResult<JsonObject>> resultHandler) {
+    mongoClient.save("items", item, response -> {
+      if (response.succeeded()) {
+        JsonObject message = new JsonObject().put("message", "Item created successfully.");
+        resultHandler.handle(Future.succeededFuture(message));
       } else {
         response.cause().printStackTrace();
       }
