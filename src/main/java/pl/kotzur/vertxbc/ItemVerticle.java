@@ -61,6 +61,7 @@ public class ItemVerticle extends AbstractVerticle {
     String userId = routingContext.user().get("userId");
     repository.getItemsByOwnerId(userId, response -> {
       if (response.succeeded()) {
+        System.out.println(response.result());
         routingContext.response()
           .putHeader("Content-Type", "application/json")
           .end(new JsonObject().put("data", response.result()).encode());
@@ -122,20 +123,12 @@ public class ItemVerticle extends AbstractVerticle {
     UUID uuidId = UUID.randomUUID();
     user.put("_id", uuidId.toString());
 
-    System.out.println(user);
-
-    mongoClient.save("users", user, response -> {
+    repository.saveUser(user, response -> {
       if (response.succeeded()) {
-        String id = response.result();
-        System.out.println("Inserted item with id: " + id);
+        routingContext.response().end(response.result().encodePrettily());
       } else {
         response.cause().printStackTrace();
       }
     });
-
-    JsonObject response = new JsonObject();
-    response.put("message", "User created successfully.");
-    routingContext.response().end(response.encodePrettily());
-
   }
 }

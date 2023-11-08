@@ -8,6 +8,8 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
 
+import java.util.List;
+
 public class MongoRepository {
 
   private final MongoClient mongoClient;
@@ -19,14 +21,14 @@ public class MongoRepository {
     mongoClient = MongoClient.create(vertx, config);
   }
 
-  public void getItemsByOwnerId(String ownerId, Handler<AsyncResult<JsonArray>> resultHandler) {
+  public void getItemsByOwnerId(String ownerId, Handler<AsyncResult<List<JsonObject>>> resultHandler) {
     JsonObject query = new JsonObject().put("owner", ownerId);
     mongoClient.find("items", query, response -> {
       if (response.succeeded()) {
         if (response.result() == null) {
           resultHandler.handle(Future.failedFuture("Error"));
         } else {
-          JsonArray items = JsonArray.of(response.result());
+          List<JsonObject> items = response.result();
           resultHandler.handle(Future.succeededFuture(items));
         }
       } else {
@@ -55,6 +57,17 @@ public class MongoRepository {
     mongoClient.save("items", item, response -> {
       if (response.succeeded()) {
         JsonObject message = new JsonObject().put("message", "Item created successfully.");
+        resultHandler.handle(Future.succeededFuture(message));
+      } else {
+        response.cause().printStackTrace();
+      }
+    });
+  }
+
+  public void saveUser(JsonObject user, Handler<AsyncResult<JsonObject>> resultHandler) {
+    mongoClient.save("users", user, response -> {
+      if (response.succeeded()) {
+        JsonObject message = new JsonObject().put("message", "User created successfully.");
         resultHandler.handle(Future.succeededFuture(message));
       } else {
         response.cause().printStackTrace();
