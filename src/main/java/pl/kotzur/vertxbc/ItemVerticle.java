@@ -12,6 +12,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.JWTAuthHandler;
+import org.mindrot.jbcrypt.BCrypt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.kotzur.vertxbc.db.MongoRepository;
@@ -40,10 +41,11 @@ public class ItemVerticle extends AbstractVerticle {
     Router router = Router.router(vertx);
     router.route().handler(BodyHandler.create());
     router.route("/items").handler(JWTAuthHandler.create(provider));
-    router.get("/items").handler(this::getItems);
-    router.post("/items").handler(BodyHandler.create()).handler(this::postItem);
-    router.post("/login").handler(BodyHandler.create()).handler(this::postLogin);
+
     router.post("/register").handler(BodyHandler.create()).handler(this::postRegister);
+    router.post("/login").handler(BodyHandler.create()).handler(this::postLogin);
+    router.post("/items").handler(BodyHandler.create()).handler(this::postItem);
+    router.get("/items").handler(this::getItems);
 
     HttpServer httpServer = vertx.createHttpServer();
     httpServer.requestHandler(router)
@@ -55,30 +57,18 @@ public class ItemVerticle extends AbstractVerticle {
       .onFailure(startPromise::fail);
   }
 
-  private void getItems(RoutingContext routingContext) {
-    String userId = routingContext.user().get("userId");
-    repository.getItemsByOwnerId(userId, response -> {
-      if (response.succeeded()) {
-        routingContext.response()
-          .putHeader("Content-Type", "application/json")
-          .end(new JsonObject().put("data", response.result()).encode());
-      } else {
-        response.cause().printStackTrace();
-      }
-    });
-  }
-
-  private void postItem(RoutingContext routingContext) {
-    JsonObject item = routingContext.body().asJsonObject();
-    String userId = routingContext.user().get("userId");
+  private void postRegister(RoutingContext routingContext) {
+    JsonObject user = routingContext.body().asJsonObject();
     UUID uuidId = UUID.randomUUID();
-    item.put("_id", uuidId.toString());
-    UUID uuidOwner = UUID.fromString(userId);
-    item.put("owner", uuidOwner.toString());
+    user.put("_id", uuidId.toString());
+    String password = user.getString("password");
+    String hashed = BCrypt.hashpw(password, BCrypt.gensalt());
+    user.remove("password");
+    user.put("password", hashed);
 
-    repository.saveItem(item, response -> {
+    repository.saveUser(user, response -> {
       if (response.succeeded()) {
-        routingContext.response().end(response.result().encodePrettily());
+        routingContext.response().setStatusCode(204).end(response.result().encodePrettily());
       } else {
         response.cause().printStackTrace();
       }
@@ -98,7 +88,7 @@ public class ItemVerticle extends AbstractVerticle {
         String id = userDB.getString("_id");
         String token;
 
-        if (loginDB.equals(login) && passwordDB.equals(password)) {
+        if (loginDB.equals(login) && BCrypt.checkpw(password, passwordDB)) {
           token = provider.generateToken(
             new JsonObject()
               .put("sub", login)
@@ -114,13 +104,15 @@ public class ItemVerticle extends AbstractVerticle {
 
   }
 
-  private void postRegister(RoutingContext routingContext) {
-
-    JsonObject user = routingContext.body().asJsonObject();
+  private void postItem(RoutingContext routingContext) {
+    JsonObject item = routingContext.body().asJsonObject();
+    String userId = routingContext.user().get("userId");
     UUID uuidId = UUID.randomUUID();
-    user.put("_id", uuidId.toString());
+    item.put("_id", uuidId.toString());
+    UUID uuidOwner = UUID.fromString(userId);
+    item.put("owner", uuidOwner.toString());
 
-    repository.saveUser(user, response -> {
+    repository.saveItem(item, response -> {
       if (response.succeeded()) {
         routingContext.response().end(response.result().encodePrettily());
       } else {
@@ -128,4 +120,18 @@ public class ItemVerticle extends AbstractVerticle {
       }
     });
   }
+
+  private void getItems(RoutingContext routingContext) {
+    String userId = routingContext.user().get("userId");
+    repository.getItemsByOwnerId(userId, response -> {
+      if (response.succeeded()) {
+        routingContext.response()
+          .putHeader("Content-Type", "application/json")
+          .end(new JsonObject().put("data", response.result()).encode());
+      } else {
+        response.cause().printStackTrace();
+      }
+    });
+  }
+
 }

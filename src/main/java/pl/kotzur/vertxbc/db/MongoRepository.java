@@ -66,7 +66,7 @@ public class MongoRepository {
   public void saveUser(JsonObject user, Handler<AsyncResult<JsonObject>> resultHandler) {
     mongoClient.save("users", user, response -> {
       if (response.succeeded()) {
-        JsonObject message = new JsonObject().put("message", "User created successfully.");
+        JsonObject message = new JsonObject().put("message", "Registering successfull.");
         resultHandler.handle(Future.succeededFuture(message));
       } else {
         response.cause().printStackTrace();
