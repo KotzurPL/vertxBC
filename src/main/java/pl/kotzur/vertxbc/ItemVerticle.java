@@ -8,7 +8,6 @@ import io.vertx.ext.auth.JWTOptions;
 import io.vertx.ext.auth.PubSecKeyOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
-import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -22,8 +21,6 @@ import java.util.UUID;
 public class ItemVerticle extends AbstractVerticle {
 
   public static final Logger logger = LoggerFactory.getLogger(ItemVerticle.class);
-
-  private MongoClient mongoClient;
 
   private JWTAuth provider;
 
@@ -41,6 +38,7 @@ public class ItemVerticle extends AbstractVerticle {
     repository = new MongoRepository(vertx);
 
     Router router = Router.router(vertx);
+    router.route().handler(BodyHandler.create());
     router.route("/items").handler(JWTAuthHandler.create(provider));
     router.get("/items").handler(this::getItems);
     router.post("/items").handler(BodyHandler.create()).handler(this::postItem);
@@ -61,7 +59,6 @@ public class ItemVerticle extends AbstractVerticle {
     String userId = routingContext.user().get("userId");
     repository.getItemsByOwnerId(userId, response -> {
       if (response.succeeded()) {
-        System.out.println(response.result());
         routingContext.response()
           .putHeader("Content-Type", "application/json")
           .end(new JsonObject().put("data", response.result()).encode());
@@ -72,7 +69,7 @@ public class ItemVerticle extends AbstractVerticle {
   }
 
   private void postItem(RoutingContext routingContext) {
-    JsonObject item = routingContext.getBodyAsJson();
+    JsonObject item = routingContext.body().asJsonObject();
     String userId = routingContext.user().get("userId");
     UUID uuidId = UUID.randomUUID();
     item.put("_id", uuidId.toString());
@@ -89,7 +86,7 @@ public class ItemVerticle extends AbstractVerticle {
   }
 
   private void postLogin(RoutingContext routingContext) {
-    JsonObject credentials = routingContext.getBodyAsJson();
+    JsonObject credentials = routingContext.body().asJsonObject();
     String login = credentials.getString("login");
     String password = credentials.getString("password");
 
@@ -119,7 +116,7 @@ public class ItemVerticle extends AbstractVerticle {
 
   private void postRegister(RoutingContext routingContext) {
 
-    JsonObject user = routingContext.getBodyAsJson();
+    JsonObject user = routingContext.body().asJsonObject();
     UUID uuidId = UUID.randomUUID();
     user.put("_id", uuidId.toString());
 
