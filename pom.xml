@@ -50,21 +50,15 @@
     </dependency>
 
     <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.13.2</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>io.vertx</groupId>
-      <artifactId>vertx-junit5</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-api</artifactId>
-      <version>${junit-jupiter.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-engine</artifactId>
-      <version>${junit-jupiter.version}</version>
-      <scope>test</scope>
+      <artifactId>vertx-unit</artifactId>
+      <version>${vertx.version}</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -75,6 +69,11 @@
       <groupId>org.mindrot</groupId>
       <artifactId>jbcrypt</artifactId>
       <version>0.4</version>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-web-client</artifactId>
+      <version>4.4.6</version>
     </dependency>
   </dependencies>
 

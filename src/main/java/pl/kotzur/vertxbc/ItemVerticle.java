@@ -13,15 +13,11 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.JWTAuthHandler;
 import org.mindrot.jbcrypt.BCrypt;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import pl.kotzur.vertxbc.db.MongoRepository;
 
 import java.util.UUID;
 
 public class ItemVerticle extends AbstractVerticle {
-
-  public static final Logger logger = LoggerFactory.getLogger(ItemVerticle.class);
 
   private JWTAuth provider;
 
@@ -41,6 +37,7 @@ public class ItemVerticle extends AbstractVerticle {
     Router router = Router.router(vertx);
     router.route().handler(BodyHandler.create());
     router.route("/items").handler(JWTAuthHandler.create(provider));
+    //router.route("/items").failureHandler()
 
     router.post("/register").handler(BodyHandler.create()).handler(this::postRegister);
     router.post("/login").handler(BodyHandler.create()).handler(this::postLogin);
@@ -51,7 +48,6 @@ public class ItemVerticle extends AbstractVerticle {
     httpServer.requestHandler(router)
       .listen(8888)
       .onSuccess(ok -> {
-        logger.info("http server running: http://localhost:8888");
         startPromise.complete();
       })
       .onFailure(startPromise::fail);
@@ -68,7 +64,7 @@ public class ItemVerticle extends AbstractVerticle {
 
     repository.saveUser(user, response -> {
       if (response.succeeded()) {
-        routingContext.response().setStatusCode(204).end(response.result().encodePrettily());
+        routingContext.response().setStatusCode(204).end();
       } else {
         response.cause().printStackTrace();
       }
@@ -93,10 +89,11 @@ public class ItemVerticle extends AbstractVerticle {
             new JsonObject()
               .put("sub", login)
               .put("userId", id), new JWTOptions().setExpiresInMinutes(5));
+          routingContext.response().end(new JsonObject().put("token", token).encode());
         } else {
-          token = "";
+          routingContext.fail(401);
         }
-        routingContext.response().end(new JsonObject().put("jwt", token).encode());
+
       } else {
         response.cause().printStackTrace();
       }
@@ -114,7 +111,7 @@ public class ItemVerticle extends AbstractVerticle {
 
     repository.saveItem(item, response -> {
       if (response.succeeded()) {
-        routingContext.response().end(response.result().encodePrettily());
+        routingContext.response().setStatusCode(204).end();
       } else {
         response.cause().printStackTrace();
       }
@@ -127,7 +124,7 @@ public class ItemVerticle extends AbstractVerticle {
       if (response.succeeded()) {
         routingContext.response()
           .putHeader("Content-Type", "application/json")
-          .end(new JsonObject().put("data", response.result()).encode());
+          .end(new JsonObject().put("items", response.result()).encode());
       } else {
         response.cause().printStackTrace();
       }
